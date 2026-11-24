@@ -5,26 +5,27 @@ description: 质检规范——报告结构、锚点格式、机验说明、三�
 
 # 质检规范
 
-本 skill 是质检规则的唯一来源。资料专家、测试专家、质检专家按本 skill 自行机验，经理不读 skill、不跑机验。
+本 skill 是质检规则的唯一来源。资料专家、测试专家、质检专家按本 skill 自行机验。
 
 ## 通用纪律
 
-- 质检等于机验加语义检。机验覆盖的格式问题以机验结果为准，通过后不重复入报告。
-- 机验 failures 逐条记阻塞并判未收敛。warnings 逐条写处置，不进收敛判定。
-- 报告只追加，不改写历史轮次。问题只进质检报告，只提建议，不代修产物。
+- 质检等于机验加语义检。机验覆盖的格式问题不重复入报告。
+- failures 逐条记阻塞并判未收敛；warnings 逐条写处置，不进收敛判定。机验只是送检前置，不单独决定语义收敛。
+- 一般项不进收敛判定，最终状态记入 `state.md`。
+- 报告只追加，不改写历史轮次。问题只进报告，只提建议，不代修产物。
 - 每步思考只写结论，不复述规则，不枚举全部条目。回报不复制清单行，不复述机验输出。
 
 ## 报告结构
 
 ```markdown
-## R{N}
+## {域}R{N}
 
 **检查范围**：本轮检视的资料、功能模块或 TP 与批次
 
 ### 问题清单
 | 问题编号 | 分级 | 条目 | 问题描述 | 证据锚点 | 建议 |
 | --- | --- | --- | --- | --- | --- |
-| Q-TP-R1-01 | 重大 | TP-004 | 颗粒度过细 | prd1.md:15 => "……" | 并入 TP-002 |
+| Q-TP-F01-R1-01 | 重大 | tp-F01.json TP-004 | 颗粒度过细 | prd1.md:15 => "……" | 并入 TP-002 |
 
 ### 对照表复检
 | 问题编号 | 复检结果 | 核对说明 |
@@ -39,12 +40,13 @@ Y 或 N，列剩余阻塞与重大项
 
 | 字段 | 要求 |
 | --- | --- |
-| 检查范围 | 本轮实际检视的资料或条目，分批时逐批列出 |
+| 小节标题 | `## 材料R{N}` / `## TP-B{批号}-R{N}` / `## TC-B{批号}-R{N}`；补充轮用 `## TP-B{批号}-补充` / `## TC-B{批号}-补充`。每份报告只含一个批次 |
+| 检查范围 | 本轮实际检视的资料或条目，写本批号与所选功能点；不跨批 |
 | 域边界 | 每份报告只评价本域产物。冻结产物作为输入事实，不作为问题对象。TC 报告不得评价或要求修改 TP，TP 报告不得评价或要求修改资料索引，材料报告只评价索引 |
-| 问题清单 | 附证据锚点。编号用 `Q-M-R{N}-{seq}`、`Q-TP-R{N}-{seq}`、`Q-TC-R{N}-{seq}`。问题描述只写当前域条目和当前域可执行修正 |
+| 问题清单 | 附证据锚点。编号用 `Q-M-R{N}-{seq}`、`Q-TP-{功能号}-R{N}-{seq}`、`Q-TC-{功能号}-R{N}-{seq}`，功能号入编号保证单份 repair-log 内唯一。条目列引用 TP/TC 须带功能文件名，如 `tp-F01.json TP-004`。问题描述只写当前域条目和当前域可执行修正 |
 | 对照表复检 | R2+ 填写，只查问题清单中的编号 |
 | 新增条目检查 | R2+ 填写，只查本轮新增条目 |
-| 收敛判定 | 阻塞与重大均为 0 才判 Y。一般项不阻止收敛，不派修复，记 `state.md`。当前域无法修复的冲突写清原因，呈用户决策，不派修复。判定语写「阻塞 N / 重大 N / 一般 N；收敛判定 Y/N；一句理由」 |
+| 收敛判定 | 阻塞与重大均为 0 才判 Y。当前域无法修复的冲突写清原因并呈用户决策，不派修复。判定语写「阻塞 N / 重大 N / 一般 N；收敛判定 Y/N；一句理由」 |
 
 材料域专用小节追加到 `qa-materials.md`：
 
@@ -55,7 +57,7 @@ Y 或 N，列剩余阻塞与重大项
 
 ## 语义判据
 
-TP 与 TC 语义检视共用。机验覆盖的格式问题不重复列入。
+TP 与 TC 语义检视共用。
 
 | # | 维度 | 判定要点 | 分级参考 |
 | --- | --- | --- | --- |
@@ -74,26 +76,28 @@ TP 与 TC 语义检视共用。机验覆盖的格式问题不重复列入。
 | xlsx | `文件名#Sheet名!单元格 => "摘抄"` |
 
 1. 摘抄须是定位行的连续原文，尽量 50 字以内。改写或缩合即问题。
-2. 摘抄不得含半角双引号、竖线或 ` => `。多锚点用 ` ;; ` 分隔，分隔符用 ASCII `-`。
+2. 摘抄不得含半角双引号、竖线或 ` => `。markdown 中多锚点用 ` ;; ` 分隔；JSON 清单中每个锚点为数组一项。分隔符用 ASCII `-`。
 3. md 行区间须 `1 ≤ 起始 ≤ 结束 ≤ 总行数`。docx 标题须对应 Heading 段落。禁裸格式 `文件名:行号`。
 4. 整行锚点不得用反引号包裹，否则摘抄以反引号结尾，解析判非法。
 
 ## 机验说明
 
-`verify_citation.py` 检查锚点、表格、值域、关联、澄清编号与数量守恒。退出码 0 无失败，1 有失败，2 用法或致命错误。payload 含 `ok`、`summary`、`failures`、`warnings`、`fatal_messages`。
+`verify_citation.py` 检查锚点、JSON 清单结构、值域、关联、澄清编号、数量守恒与用例重复。退出码 0 无失败，1 有失败，2 用法或致命错误。payload 含 `ok`、`summary`、`failures`、`warnings`、`entry_lines`、`fatal_messages`；`entry_lines` 为功能文件→编号→条目行号映射，语义验与复检据此按行读取条目。
 
-子 agent 按表执行一次。不读脚本源码，不自建检查脚本。
+执行次数：每轮每产物只跑一次。命令按下方表格原样执行，脚本用绝对路径，路径不加引号，不设 shell 变量，不加 `; echo` 等拼接；不读脚本源码，不自建检查脚本。生成或修复任务带 `--out`，质检任务不带；`--out` 仅作命令标识，结果由脚本打印到 stdout，不落盘。通过后即锁定，禁止再次执行；R2 及以后复检不跑机验，只按 `repair-log.md` 核对改动行段。产物被修改时由修改方重跑一次，其他角色不得复跑。
+
+多文件机验：`--tp`、`--tc` 重复传参逐个传本批功能文件，一条命令验完整批。TP 机验传本批各 `tp-{功能号}.json`；TC 机验传本批各 `tc-{功能号}.json`，并按功能号附带对应的 `tp-{功能号}.json` 做关联与数量守恒校验，不检 TP 内容本身。
+
+失败处理：生成或修复任务 `failures` 非零，只修指定项并复跑一次；质检任务 `failures` 非零，逐条记阻塞并判未收敛，不修产物、不复跑。`exit 2` 回报阻塞。
 
 | 场景 | 命令 |
 | --- | --- |
-| 索引生成 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md --out <会话>/state/citation-result.json` |
-| 索引质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md` |
-| TP 生成 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
-| TP 质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --clar <会话>/state/clarifications.md` |
-| TC 生成与修复 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
-| TC 质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md --clar <会话>/state/clarifications.md` |
-
-数量守恒只在传入 `--tc` 时检查。TP 阶段不再输出「无关联用例」warning。
+| 索引生成 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --index <会话>/scope/resources-index.md --out <会话>/state/citation-result.json` |
+| 索引质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --index <会话>/scope/resources-index.md` |
+| TP 生成（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --tp <会话>/output/tp/tp-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
+| TP 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --tp <会话>/output/tp/tp-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --clar <会话>/state/clarifications.md` |
+| TC 生成与修复（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --tp <会话>/output/tp/tp-{功能号1}.json --tc <会话>/output/tc/tc-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --tc <会话>/output/tc/tc-{功能号2}.json --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
+| TC 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --tp <会话>/output/tp/tp-{功能号1}.json --tc <会话>/output/tc/tc-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --tc <会话>/output/tc/tc-{功能号2}.json --clar <会话>/state/clarifications.md` |
 
 ## 资料域
 
@@ -127,9 +131,9 @@ TP 与 TC 语义检视共用。机验覆盖的格式问题不重复列入。
 
 待澄清登记：
 
-- 待澄清问题：检业务规则缺失、资料矛盾、术语多义、锚点失败、原文检索定位失败。一行一个歧义点，默认建议须可执行。
-- 待澄清资料缺口：检知识链要求测、资料未描述的小类或关注点。按测试点归类，同一测试点缺项合并一条。
-- 缺口编号用 `Q-M-R{N}-D{seq}`。默认建议无推荐取值时写「静默生成：依原文知识链推导，仅写宽泛表述，不含具体取值」。
+- 待澄清问题：检业务规则缺失、资料矛盾、术语多义、锚点失败、原文检索定位失败。一行一个歧义点，编号用 `Q-M-R{N}-C{seq}`，默认建议须可执行。
+- 待澄清资料缺口：检知识链要求测、资料未描述的小类或关注点。以测试点为粒度聚合，同一测试点的多个缺失关注点合并为一条，不得按字段或单条规则拆项；编号用 `Q-M-R{N}-D{seq}`。
+- 默认建议无推荐取值时写「静默生成：依原文知识链推导，仅写宽泛表述，不含具体取值」。
 - 待澄清问题与资料缺口不判资料不合格，不阻塞收敛，供关口 2 决策。
 
 ## TP 域
@@ -150,4 +154,4 @@ TP 与 TC 语义检视共用。机验覆盖的格式问题不重复列入。
 | 方法适配 | TP 形态与 `测试方法` 对应。状态流转类全非状态迁移、组合类全无决策表即提示 | 错配一般 |
 | 硬凑检测 | 同值改名、伪边界、拆一为多、按 TP 均摊条数、空壳充数、方法论补充复制改名 | 均摊或空壳阻塞，其余重大 |
 | 字段质量 | 逐列核标题、测试数据、操作步骤、预期结果。已明确的角色、状态、字段或文案泛化即判错 | 重大 |
-| 用例重复 | 两条 TC 同 TP、同数据、同步骤、同预期 | 重大 |
+| 用例重复 | 关联TP、测试数据、操作步骤、预期结果四要素全同已由机验覆盖，语义验不复核；同值改名等近似重复走硬凑检测 | 阻塞，随机验 failures |

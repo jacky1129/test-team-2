@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import zipfile
@@ -35,10 +36,61 @@ def core_quote(q):
     return q.strip().rstrip(".…")
 
 
-def anchors_of(cell):
-    if not cell:
+def as_list(value):
+    """多值字段归一化为列表：JSON 数组逐项取字符串；markdown 字符串按 ` ;; ` 拆分。`-` 与空值视为无。"""
+    if value is None:
         return []
-    return [a.strip() for a in cell.split(";;") if a.strip()]
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip() not in ("", "-")]
+    return [p.strip() for p in str(value).split(";;") if p.strip() and p.strip() != "-"]
+
+
+def anchors_of(cell):
+    return as_list(cell)
+
+
+def json_table_with_lines(path):
+    """读取表格化 JSON 清单（顶层对象含 name、headers、rows），返回 (name, headers, rows, 条目行号列表, 错误信息)。
+    rows 每条一行数组，单元格为字符串或字符串数组；一条数据占一个物理行，
+    条目行号即该行行号，供语义验与复检按行精准读取单条。结构非法返回错误。"""
+    with open(path, encoding="utf-8-sig", errors="replace") as fh:
+        text = fh.read()
+    if not text.strip():
+        return None, None, None, None, "文件为空"
+    try:
+        data = json.loads(text)
+    except ValueError as exc:
+        return None, None, None, None, "JSON 解析失败：{}".format(exc)
+    if not isinstance(data, dict):
+        return None, None, None, None, "顶层须为对象（含 name、headers、rows）"
+    name = data.get("name")
+    headers = data.get("headers")
+    rows = data.get("rows")
+    if not isinstance(name, str) or not name.strip():
+        return None, None, None, None, "缺少字符串字段 `name`"
+    if not isinstance(headers, list) or not all(isinstance(h, str) and h.strip() for h in headers):
+        return None, None, None, None, "`headers` 须为非空字符串数组"
+    if not isinstance(rows, list):
+        return None, None, None, None, "缺少 `rows` 数组"
+    for i, r in enumerate(rows, 1):
+        if not isinstance(r, list):
+            return None, None, None, None, "`rows` 第 {} 条不是数组".format(i)
+        if len(r) != len(headers):
+            return None, None, None, None, "`rows` 第 {} 条长度 {} 与 headers 长度 {} 不一致".format(i, len(r), len(headers))
+    # 定位 rows 开括号行：其后每个数据行即一条条目；空行跳过，遇闭合括号停止，避免行号错位
+    marks = []
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if re.search(r'"rows"\s*:\s*\[', line):
+            for j in range(i + 1, len(lines)):
+                s = lines[j].strip()
+                if not s:
+                    continue
+                if s.startswith("]"):
+                    break
+                marks.append(j + 1)
+            break
+    return name, headers, rows, marks, None
 
 
 def find_candidates(basename, roots):
